@@ -96,6 +96,18 @@ int main()
 
     free( head_ptr );
 
+    //TODO: change directories chdir() 
+    if (!(strcmp("cd", token[0])))
+    {
+        printf("Change directory to %s\n",token[1]);
+    }
+
+
+    else if ((!(strcmp("quit", token[0]))) || !(strcmp("exit", token[0])))
+    {
+            printf("Goodbye\n");
+            return 0;
+    }
   }
   return 0;
   // e2520ca2-76f3-90d6-0242ac120003
