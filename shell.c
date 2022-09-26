@@ -44,52 +44,90 @@
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports four arguments
 #define MAX_NUM_HISTORY 14
 
-void addToHistory(char *command[], int historyIndex);
-void history(int history_index, char *historyArray[], char *stringNumber);
+void addToHistory(char *command, char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_index);
+char* getCommandHistory(char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_cmd);
+
+int checkValidHistoryCommand(int *history_index, char *stringNumber);
+void getCommand();
 int searchCmds(char *cmd, char *cwd, char*tokens[]);
 int lookup(char *location, char *cmd);
 int execute(char *path, char *tokens[]);
 
+
 int main()
 {
+    int history_index = 0;
 
     char s[100];
     char *command_string = (char *)malloc(MAX_COMMAND_SIZE);
-    int history_index = 0;
-    char **historyArray = malloc(MAX_NUM_HISTORY*sizeof(char));
-    for (int i = 0; i < MAX_NUM_HISTORY; i++)
-    {
-        historyArray[i] = malloc(MAX_COMMAND_SIZE * sizeof(char));
-    }
+    char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE];
+    int historyCmdValue;
+    // for (int i = 0; i <MAX_NUM_HISTORY; i++)
+    // {
+    //     historyArray[history_index] = (char*)malloc(MAX_COMMAND_SIZE*sizeof(char));
+    // }
+
+    int getCommandFromHistory = 0;
+    char *originalCommand = (char *)malloc(MAX_COMMAND_SIZE);
+
+    // for (int i = 0; i < MAX_NUM_HISTORY; i++)
+    // {
+    //     historyArray[i] = (char*)malloc(MAX_COMMAND_SIZE*sizeof(char));
+    //     historyArray[i] = i+"0";
+    // }
+    // for (int i = 0; i < MAX_NUM_HISTORY; i++)
+    // {
+    //     printf("%d: %s\n", i, historyArray[i]);
+    // }
+
+    // for (int i = 0; i < MAX_NUM_HISTORY; i++)
+    // {
+    //     historyArray[i] = malloc(MAX_COMMAND_SIZE * sizeof(char));
+    // }
 
         while (1)
         {
+            
+            
+
+            //getCommand();
+            
+
+            // Pointer to point to the token
+            // parsed by strsep
+            char *working_string;
+            
+
+            if (getCommandFromHistory)
+            {
+                working_string = strdup(historyArray[historyCmdValue]);
+                getCommandFromHistory = 0;
+            }
+            else
+            {
             // Print out the msh prompt
             printf("msh  %s> ", getcwd(s, 100));
-
             // Read the command from the commandline.  The
             // maximum command that will be read is MAX_COMMAND_SIZE
             // This while command will wait here until the user
             // inputs something since fgets returns NULL when there
             // is no input
             while (!fgets(command_string, MAX_COMMAND_SIZE, stdin));
-
             /* Parse input */
+            working_string = strdup(command_string);
+            } 
+            strcpy(originalCommand, working_string);
             char *token[MAX_NUM_ARGUMENTS];
-
             int token_count = 0;
 
-            // Pointer to point to the token
-            // parsed by strsep
             char *argument_ptr;
 
-            char *working_string = strdup(command_string);
             //printf("%s\n", working_string);
             // we are going to move the working_string pointer so
             // keep track of its original value so we can deallocate
             // the correct amount at the end
             char *head_ptr = working_string;
-
+            
             // Tokenize the input strings with whitespace used as the delimiter
             while (((argument_ptr = strsep(&working_string, WHITESPACE)) != NULL) &&
                    (token_count < MAX_NUM_ARGUMENTS))
@@ -110,7 +148,7 @@ int main()
             // {
             //     printf("token[%d] = %s\n", token_index, token[token_index]);
             // }
-
+            
             free(head_ptr);
 
             // TODO: if no input then program will continue
@@ -126,6 +164,16 @@ int main()
                 return 0;
             }
 
+            else if (!(strcmp("history", token[0])))
+            {
+                addToHistory(originalCommand, historyArray, history_index);
+                history_index++;
+                for (int i = 0; i < history_index; i++)
+                {
+                    printf("%d: %s", i,historyArray[i]);
+                }
+            }
+
             // when user inputs cd
             else if (!(strcmp("cd", token[0])))
             {
@@ -135,20 +183,23 @@ int main()
                 }
                 else 
                 {
-                    addToHistory(token,history_index);
+                    addToHistory(originalCommand, historyArray, history_index);
+                    history_index++;
                 }
             }
             else if (('!' == token[0][0] && token[1] == NULL)) //&& isdigit(token[0][2]))
             {
                 char stringNumber[10];
                 strcpy(stringNumber, token[0] + 1);
-                //printf("%s\n", stringNumber);
-                history(history_index, historyArray, stringNumber);
-                int historyValue;
-
-                
-
-                
+                historyCmdValue = checkValidHistoryCommand(&history_index, stringNumber);
+                if (historyCmdValue >= 0)
+                {
+                    getCommandFromHistory = 1;
+                }
+                else
+                {
+                    getCommandFromHistory = 0;
+                } 
             }
             else
             {
@@ -157,59 +208,76 @@ int main()
                 {
                     printf("%s: Command not found\n", token[0]);
                 }
-                // TODO history of commands
+                else 
+                {
+                    addToHistory(originalCommand, historyArray, history_index);
+                    history_index++;
+                }
                 // TODO listpids
             }
+            
         }
+    free(historyArray);
   return 0;
   // e2520ca2-76f3-90d6-0242ac120003
 }
-void addToHistory(char *command[], int historyIndex)
+void addToHistory(char *command,  char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_index)
 {
+    //command[strcspn(command, "\n")] = 0;
+    //*historyArray = (char*)malloc(MAX_COMMAND_SIZE*sizeof(char));
 
+    strcpy(historyArray[history_index],command);
+    //historyArray++;
+
+   // printf("%d: %s: %p\n", history_index, historyArray[history_index], &historyArray[history_index]);
 }
 
-void history(int history_index, char *historyArray[], char *stringNumber)
+char* getCommandHistory(char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_cmd)
+{
+    printf("%s", historyArray[history_cmd]);
+    return historyArray[history_cmd];
+}
+
+int checkValidHistoryCommand(int *history_index, char *stringNumber)
 {
     int length = strlen(stringNumber);
     int historyValue;
 
-    for (int i=0;i<length; i++)
+    for (int i=0;i<length;i++)
     {
         if (!isdigit(stringNumber[i]))
         {
             printf ("Entered input is not a positive number\n");
-            return;
+            return -1;
         }
     }
 
     historyValue = atoi(stringNumber);
-    printf("%d\n", historyValue);
+    //printf("%d\n", historyValue);
     
     if (historyValue > 14)
     {
         printf("Must be between 0 and 14\n");
-        return;
+        return -1;
     }
     else
     {
-        if (historyValue > history_index)
+        if (historyValue > *history_index)
         {
-            printf("Command not in history");
+            printf("Command not in history\n");
+            return -1;
         }
         else 
         {
-
+            return historyValue;
         }
     }
 
-                // if (history_index)
-                // {
-                //     for (int i = 0; i < history_index; i++)
-                //     {
+                
+}
+void getCommand()
+{
 
-                //     }
-                // }
 }
 
 int searchCmds(char *cmd, char *cwd, char *tokens[])
@@ -248,7 +316,7 @@ int lookup(char *location, char *cmd)
         
         if(strcmp(direntP->d_name, cmd)==0 ) 
         {
-            printf("%s %s\n", "FOLDER", direntP->d_name);
+            //printf("%s %s\n", "FOLDER", direntP->d_name);
             closedir(dir);
             return 1;
         }
