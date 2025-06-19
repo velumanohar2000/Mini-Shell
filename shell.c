@@ -168,6 +168,7 @@ int main()
             {
                 free_tokens(token);
                 printf("Goodbye\n");
+
                 return 0;
             }
 
@@ -228,6 +229,7 @@ int main()
         }
     free(historyArray);
   return 0;
+
   // e2520ca2-76f3-90d6-0242ac120003
 }
 void addToHistory(char *command,  char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_index)
@@ -322,15 +324,17 @@ int lookup(char *location, char *cmd)
 
     while((direntP=readdir(dir))!= NULL)
     {
-        
-        if(strcmp(direntP->d_name, cmd)==0 ) 
+
+        if(strcmp(direntP->d_name, cmd)==0 )
         {
             //printf("%s %s\n", "FOLDER", direntP->d_name);
             closedir(dir);
             return 1;
         }
-      
+
     }
+    closedir(dir);
+    return 0;
 }
         
 int execute(char* path, char *tokens[])
@@ -361,3 +365,4 @@ void free_tokens(char *tokens[])
         }
     }
 }
+
