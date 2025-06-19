@@ -44,147 +44,140 @@
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports four arguments
 #define MAX_NUM_HISTORY 14
 
-void addToHistory(char *command, char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_index);
+void addToHistory(const char *command,
+                  char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE]);
 char* getCommandHistory(char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_cmd);
 
-int checkValidHistoryCommand(int *history_index, char *stringNumber);
+int checkValidHistoryCommand(int history_index, char *stringNumber);
 void getCommand();
 int searchCmds(char *cmd, char *cwd, char*tokens[]);
 int lookup(char *location, char *cmd);
 int execute(char *path, char *tokens[]);
 
+int hist_start = 0;
+int hist_count = 0;
+
 
 int main()
 {
-    int history_index = 0;
 
     char s[100];
     char *command_string = (char *)malloc(MAX_COMMAND_SIZE);
     char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE];
-    int historyCmdValue;
+    int historyCmdValue = 0;
 
     int getCommandFromHistory = 0;
     char *originalCommand = (char *)malloc(MAX_COMMAND_SIZE);
 
 
-        while (1)
+    while (1)
+    {
+        // Pointer to point to the token
+        // parsed by strsep
+        char *working_string;
+        if (getCommandFromHistory)
         {
-            // Pointer to point to the token
-            // parsed by strsep
-            char *working_string;
-            
-
-            if (getCommandFromHistory)
-            {
-                working_string = strdup(historyArray[historyCmdValue]);
-                getCommandFromHistory = 0;
-            }
-            else
-            {
-                // Print out the msh prompt
-                printf("msh  %s> ", getcwd(s, 100));
-                // Read the command from the commandline.  The
-                // maximum command that will be read is MAX_COMMAND_SIZE
-                // This while command will wait here until the user
-                // inputs something since fgets returns NULL when there
-                // is no input
-                while (!fgets(command_string, MAX_COMMAND_SIZE, stdin));
-                /* Parse input */
-                working_string = strdup(command_string);
-            } 
-            strcpy(originalCommand, working_string);
-            char *token[MAX_NUM_ARGUMENTS];
-            int token_count = 0;
-
-            char *argument_ptr;
-
-            // we are going to move the working_string pointer so
-            // keep track of its original value so we can deallocate
-            // the correct amount at the end
-            char *head_ptr = working_string;
-            
-            // Tokenize the input strings with whitespace used as the delimiter
-            while (((argument_ptr = strsep(&working_string, WHITESPACE)) != NULL) &&
-                   (token_count < MAX_NUM_ARGUMENTS))
-            {
-                token[token_count] = strndup(argument_ptr, MAX_COMMAND_SIZE);
-                if (strlen(token[token_count]) == 0)
-                {
-                    token[token_count] = NULL;
-                }
-                token_count++;
-            }
-            
-            free(head_ptr);
-
-            if (token[0] == NULL)
-            {
-                continue;
-            }
-
-            // when user inputs quit
-            else if ((!(strcmp("quit", token[0]))) || !(strcmp("exit", token[0])))
-            {
-                printf("Goodbye\n");
-                return 0;
-            }
-
-            else if (!(strcmp("history", token[0])))
-            {
-                addToHistory(originalCommand, historyArray, history_index);
-                history_index++;
-                for (int i = 0; i < history_index; i++)
-                {
-                    printf("%d: %s", i,historyArray[i]);
-                }
-            }
-            else if (!(strcmp("cd", token[0])))
-            {
-                if (chdir(token[1]) != 0)
-                {
-                    printf("cd: %s: No such file or directory\n", token[1]);
-                }
-                else 
-                {
-                    addToHistory(originalCommand, historyArray, history_index);
-                    history_index++;
-                }
-            }
-            else if (('!' == token[0][0] && token[1] == NULL))
-            {
-                char stringNumber[10];
-                strcpy(stringNumber, token[0] + 1);
-                historyCmdValue = checkValidHistoryCommand(&history_index, stringNumber);
-                if (historyCmdValue >= 0)
-                {
-                    getCommandFromHistory = 1;
-                }
-                else
-                {
-                    getCommandFromHistory = 0;
-                } 
-            }
-            else
-            {
-                int found = searchCmds(token[0], getcwd(s, 100), token);
-                if (!found)
-                {
-                    printf("%s: Command not found\n", token[0]);
-                }
-                else 
-                {
-                    addToHistory(originalCommand, historyArray, history_index);
-                    history_index++;
-                }
-            }
-            
+            working_string = strdup(historyArray[historyCmdValue]);
+            getCommandFromHistory = 0;
         }
-    free(historyArray);
-  return 0;
+        else
+        {
+            // Print out the msh prompt
+            printf("msh  %s> ", getcwd(s, 100));
+            while (!fgets(command_string, MAX_COMMAND_SIZE, stdin));
+            /* Parse input */
+            working_string = strdup(command_string);
+        } 
+        strcpy(originalCommand, working_string);
+        char *token[MAX_NUM_ARGUMENTS];
+        int token_count = 0;
+
+        char *argument_ptr;
+
+        // we are going to move the working_string pointer so
+        // keep track of its original value so we can deallocate
+        // the correct amount at the end
+        char *head_ptr = working_string;
+        
+        // Tokenize the input strings with whitespace used as the delimiter
+        while (((argument_ptr = strsep(&working_string, WHITESPACE)) != NULL) &&
+                (token_count < MAX_NUM_ARGUMENTS))
+        {
+            token[token_count] = strndup(argument_ptr, MAX_COMMAND_SIZE);
+            if (strlen(token[token_count]) == 0)
+                token[token_count] = NULL;
+            token_count++;
+        }
+        
+        free(head_ptr);
+
+        if (token[0] == NULL)
+        {
+            continue;
+        }
+
+        // when user inputs quit
+        else if ((!(strcmp("quit", token[0]))) || !(strcmp("exit", token[0])))
+        {
+            printf("Goodbye\n");
+            return 0;
+        }
+
+        else if (!(strcmp("history", token[0])))
+        {
+            // add to circular buffer
+            addToHistory(originalCommand, historyArray);
+            // print from oldest (hist_start) up to hist_count entries
+            for (int i = 0; i < hist_count; i++) {
+                int idx = (hist_start + i) % MAX_NUM_HISTORY;
+                printf("%2d: %s", i, historyArray[idx]);
+            }
+        }
+        else if (!(strcmp("cd", token[0])))
+        {
+            if (chdir(token[1]) != 0)
+                printf("cd: %s: No such file or directory\n", token[1]);
+            else 
+                addToHistory(originalCommand, historyArray);
+        }
+        else if (('!' == token[0][0] && token[1] == NULL))
+        {
+            char stringNumber[10];
+            strcpy(stringNumber, token[0] + 1);
+            historyCmdValue = checkValidHistoryCommand(hist_count, stringNumber);
+            getCommandFromHistory = (historyCmdValue >= 0);
+        }
+        else
+        {
+            int found = searchCmds(token[0], getcwd(s, 100), token);
+            if (!found)
+                printf("%s: Command not found\n", token[0]);            
+            else 
+                addToHistory(originalCommand, historyArray);
+        }
+        
+    }
+
+    free(command_string);
+    free(originalCommand);
+    return 0;
 }
-void addToHistory(char *command,  char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_index)
+// push a new entry into the circular history buffer
+void addToHistory(const char *command,
+                  char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE])
 {
-    strcpy(historyArray[history_index],command);
+    int pos = (hist_start + hist_count) % MAX_NUM_HISTORY;
+    // copy the command (truncate if necessary)
+    strncpy(historyArray[pos], command, MAX_COMMAND_SIZE-1);
+    historyArray[pos][MAX_COMMAND_SIZE-1] = '\0';
+
+    if (hist_count < MAX_NUM_HISTORY) {
+        // buffer not yet full, just grow it
+        hist_count++;
+    } else {
+        // buffer full, advance start (overwrite oldest)
+        hist_start = (hist_start + 1) % MAX_NUM_HISTORY;
+    }
 }
 
 char* getCommandHistory(char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_cmd)
@@ -193,7 +186,7 @@ char* getCommandHistory(char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], in
     return historyArray[history_cmd];
 }
 
-int checkValidHistoryCommand(int *history_index, char *stringNumber)
+int checkValidHistoryCommand(int history_index, char *stringNumber)
 {
     int length = strlen(stringNumber);
     int historyValue;
@@ -208,24 +201,21 @@ int checkValidHistoryCommand(int *history_index, char *stringNumber)
     }
 
     historyValue = atoi(stringNumber);
-    //printf("%d\n", historyValue);
     
-    if (historyValue > 14)
+    if (historyValue > MAX_NUM_HISTORY)
     {
-        printf("Must be between 0 and 14\n");
+        printf("Must be between 0 and %d\n", MAX_NUM_HISTORY - 1);
         return -1;
     }
     else
     {
-        if (historyValue > *history_index)
+        if (historyValue >= history_index)
         {
             printf("Command not in history\n");
             return -1;
         }
         else 
-        {
             return historyValue;
-        }
     }
 
                 
@@ -264,15 +254,14 @@ int lookup(char *location, char *cmd)
 
     while((direntP=readdir(dir))!= NULL)
     {
-        
         if(strcmp(direntP->d_name, cmd)==0 ) 
         {
-            //printf("%s %s\n", "FOLDER", direntP->d_name);
             closedir(dir);
             return 1;
         }
-      
     }
+    closedir(dir);
+    return 0;
 }
         
 int execute(char* path, char *tokens[])
