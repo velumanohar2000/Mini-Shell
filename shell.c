@@ -313,15 +313,17 @@ int lookup(char *location, char *cmd)
 
     while((direntP=readdir(dir))!= NULL)
     {
-        
-        if(strcmp(direntP->d_name, cmd)==0 ) 
+
+        if(strcmp(direntP->d_name, cmd)==0 )
         {
             //printf("%s %s\n", "FOLDER", direntP->d_name);
             closedir(dir);
             return 1;
         }
-      
+
     }
+    closedir(dir);
+    return 0;
 }
         
 int execute(char* path, char *tokens[])
@@ -339,4 +341,5 @@ int execute(char* path, char *tokens[])
         return 1;
     }
     waitpid(child_pid, &status, 0);
+    return 0;
 }
