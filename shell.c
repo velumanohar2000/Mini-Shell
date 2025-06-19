@@ -161,6 +161,8 @@ int main()
             else if ((!(strcmp("quit", token[0]))) || !(strcmp("exit", token[0])))
             {
                 printf("Goodbye\n");
+                free(command_string);
+                free(originalCommand);
                 return 0;
             }
 
@@ -217,7 +219,8 @@ int main()
             }
             
         }
-    free(historyArray);
+    free(command_string);
+    free(originalCommand);
   return 0;
   // e2520ca2-76f3-90d6-0242ac120003
 }
