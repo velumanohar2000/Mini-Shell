@@ -52,6 +52,7 @@ void getCommand();
 int searchCmds(char *cmd, char *cwd, char*tokens[]);
 int lookup(char *location, char *cmd);
 int execute(char *path, char *tokens[]);
+void free_tokens(char *tokens[]);
 
 
 int main()
@@ -118,6 +119,10 @@ int main()
             } 
             strcpy(originalCommand, working_string);
             char *token[MAX_NUM_ARGUMENTS];
+            for (int i = 0; i < MAX_NUM_ARGUMENTS; i++)
+            {
+                token[i] = NULL;
+            }
             int token_count = 0;
 
             char *argument_ptr;
@@ -154,15 +159,16 @@ int main()
             // TODO: if no input then program will continue
             if (token[0] == NULL)
             {
+                free_tokens(token);
                 continue;
             }
 
             // when user inputs quit
             else if ((!(strcmp("quit", token[0]))) || !(strcmp("exit", token[0])))
             {
+                free_tokens(token);
                 printf("Goodbye\n");
-                free(command_string);
-                free(originalCommand);
+
                 return 0;
             }
 
@@ -217,11 +223,13 @@ int main()
                 }
                 // TODO listpids
             }
-            
+
+            free_tokens(token);
+
         }
-    free(command_string);
-    free(originalCommand);
+    free(historyArray);
   return 0;
+
   // e2520ca2-76f3-90d6-0242ac120003
 }
 void addToHistory(char *command,  char historyArray[MAX_NUM_HISTORY][MAX_COMMAND_SIZE], int history_index)
@@ -344,5 +352,17 @@ int execute(char* path, char *tokens[])
         return 1;
     }
     waitpid(child_pid, &status, 0);
-    return 0;
 }
+
+void free_tokens(char *tokens[])
+{
+    for (int i = 0; i < MAX_NUM_ARGUMENTS; i++)
+    {
+        if (tokens[i] != NULL)
+        {
+            free(tokens[i]);
+            tokens[i] = NULL;
+        }
+    }
+}
+
